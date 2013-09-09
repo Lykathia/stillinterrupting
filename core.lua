@@ -16,12 +16,12 @@ local print = function(msg)
 end
 
 t:RegisterEvent('COMBAT_LOG_EVENT_UNFILTERED')
-function Sintt:COMBAT_LOG_EVENT_UNFILTERED(_, eventType, _, srcGUID, _, _, _, dstName, _, spellId, spellName, _, missType, enemySpell)
+function Sintt:COMBAT_LOG_EVENT_UNFILTERED(_, eventType, _, srcGUID, _, _, _, _, dstName, _, _, spellId, spellName, _, missType, enemySpell)
     if(srcGUID == UnitGUID('player')) then
         if(eventType == 'SPELL_INTERRUPT') then
-            Sintt:Interrupt(_, eventType, _, srcGUID, _, _, _, dstName, _, spellId, spellName, _, missType, enemySpell)
+            Sintt:Interrupt(_, eventType, _, srcGUID, _, _, _, _, dstName, _, _, spellId, spellName, _, missType, enemySpell)
         elseif(eventType == 'SPELL_MISSED') then
-            Sintt:Missed(_, eventType, _, srcGUID, _, _, _, dstName, _, spellId, spellName, _, missType, enemySpell)
+            Sintt:Missed(_, eventType, _, srcGUID, _, _, _, _, dstName, _, _, spellId, spellName, _, missType, enemySpell)
         end
     end
 end
@@ -33,7 +33,8 @@ function Sintt:Missed(_, _, _, _, _, _, _, dstName, _, spellId, spellName, _, mi
     or (spellId == 80964) -- Skull bash bear
     or (spellId == 34490) -- Silencing Shot
     or (spellId == 2139) -- Counterspell
-    or (spellId == 85285) -- Rebuke
+    or (spellId == 96231) -- Rebuke
+    or (spellId == 31935) -- Avenger's Shield
     or (spellId == 15487) -- Silence
     or (spellId == 1766) -- Kick
     or (spellId == 57994) -- Wind Shear
@@ -49,12 +50,12 @@ function Sintt:Missed(_, _, _, _, _, _, _, dstName, _, spellId, spellName, _, mi
         or (missType == "EVADE")
         or (missType == "RESIST") -- If dodge/parry then interrupt was late and is registering via client/server lag. Don't bother announcing.
         then
-            l2interrupt:doalert(spellName, dstName, "MISS")
+            Sintt:doalert(spellName, dstName, "MISS")
         end
     end
 end
 
-function Sintt:Interrupt(_, eventType, _, srcGUID, _, _, _, dstName, _, spellId, spellName, _, missType, enemySpell)
+function Sintt:Interrupt(_, eventType, _, srcGUID, _, _, _, _, dstName, _, _, spellId, spellName, _, missType, enemySpell)
     self.abilityduration="0"
     -- 2 Seconds
     if (spellId == 57994) -- Wind Shear
@@ -63,13 +64,14 @@ function Sintt:Interrupt(_, eventType, _, srcGUID, _, _, _, dstName, _, spellId,
     end
     -- 3 Seconds
     if (spellId == 34490) -- Silencing Shot
+    or (spellId == 31935) -- Avenger's Shield
     then
         self.abilityduration="3"
     end
     -- 4 Seconds
     if (spellId == 47528) -- Mind Freeze
     or (spellId == 6552) -- Pummel  
-    or (spellId == 85285) -- Rebuke
+    or (spellId == 96231) -- Rebuke
     then
         self.abilityduration="4"
     end
@@ -106,11 +108,14 @@ end
 
 function Sintt:doalert(ability, mob, msgtype)
     if (msgtype == "MISS") then
-	    self.warningmessage = string.gsub(string.gsub("Warning! {t} resisted my {a}!", "{t}", mob), "{a}", ability)
+       self.warningmessage = string.gsub(string.gsub("Warning! {t} resisted my {a}!", "{t}", mob), "{a}", ability)
     elseif (msgtype == "COUNTERSPELL") then
-	    self.warningmessage = string.gsub(string.gsub(string.gsub("Interrupted {s} by {t}  ({d}s)", "{s}", ability), "{t}", mob), "{d}", self.abilityduration)
+       self.warningmessage = string.gsub(string.gsub(string.gsub("Interrupted {s} by {t}  ({d}s)", "{s}", ability), "{t}", mob), "{d}", self.abilityduration)
     end
-
-    SendChatMessage(self.warningmessage, "SAY")
+    
+    if(GetNumRaidMembers()==0) then
+      SendChatMessage(self.warningmessage, "PARTY")
+    else
+      SendChatMessage(self.warningmessage, "RAID")
+    end
 end
-
